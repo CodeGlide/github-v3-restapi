@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Actions_update_self_hosted_runner_group_for_orgHandler(cfg *config.APIConfi
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: runner_group_id"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -85,23 +51,26 @@ func Actions_update_self_hosted_runner_group_for_orgHandler(cfg *config.APIConfi
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/actions/runner-groups/%s%s", cfg.BaseURL, org, runner_group_id, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/actions/runner-groups/%s", cfg.BaseURL, org, runner_group_id)
 		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Actions_update_self_hosted_runner_group_for_orgHandler(cfg *config.APIConfi
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Runner_groups_org
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,12 +108,12 @@ func CreateActions_update_self_hosted_runner_group_for_orgTool(cfg *config.APICo
 		mcp.WithDescription("Update a self-hosted runner group for an organization"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithNumber("runner_group_id", mcp.Required(), mcp.Description("Unique identifier of the self-hosted runner group.")),
-		mcp.WithString("name", mcp.Required(), mcp.Description("Input parameter: Name of the runner group.")),
-		mcp.WithString("network_configuration_id", mcp.Description("Input parameter: The identifier of a hosted compute network configuration.")),
-		mcp.WithBoolean("restricted_to_workflows", mcp.Description("Input parameter: If `true`, the runner group will be restricted to running only the workflows specified in the `selected_workflows` array.")),
 		mcp.WithArray("selected_workflows", mcp.Description("Input parameter: List of workflows the runner group should be allowed to run. This setting will be ignored unless `restricted_to_workflows` is set to `true`.")),
 		mcp.WithString("visibility", mcp.Description("Input parameter: Visibility of a runner group. You can select all repositories, select individual repositories, or all private repositories.")),
 		mcp.WithBoolean("allows_public_repositories", mcp.Description("Input parameter: Whether the runner group can be used by `public` repositories.")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Input parameter: Name of the runner group.")),
+		mcp.WithString("network_configuration_id", mcp.Description("Input parameter: The identifier of a hosted compute network configuration.")),
+		mcp.WithBoolean("restricted_to_workflows", mcp.Description("Input parameter: If `true`, the runner group will be restricted to running only the workflows specified in the `selected_workflows` array.")),
 	)
 
 	return models.Tool{

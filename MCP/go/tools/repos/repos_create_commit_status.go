@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -44,39 +43,6 @@ func Repos_create_commit_statusHandler(cfg *config.APIConfig) func(ctx context.C
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: sha"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -93,23 +59,26 @@ func Repos_create_commit_statusHandler(cfg *config.APIConfig) func(ctx context.C
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s/statuses/%s%s", cfg.BaseURL, owner, repo, sha, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/statuses/%s", cfg.BaseURL, owner, repo, sha)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -148,10 +117,10 @@ func CreateRepos_create_commit_statusTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
 		mcp.WithString("sha", mcp.Required(), mcp.Description("")),
-		mcp.WithString("state", mcp.Required(), mcp.Description("Input parameter: The state of the status.")),
-		mcp.WithString("target_url", mcp.Description("Input parameter: The target URL to associate with this status. This URL will be linked from the GitHub UI to allow users to easily see the source of the status.  \nFor example, if your continuous integration system is posting build status, you would want to provide the deep link for the build output for this specific SHA:  \n`http://ci.example.com/user/repo/build/sha`")),
 		mcp.WithString("context", mcp.Description("Input parameter: A string label to differentiate this status from the status of other systems. This field is case-insensitive.")),
 		mcp.WithString("description", mcp.Description("Input parameter: A short description of the status.")),
+		mcp.WithString("state", mcp.Required(), mcp.Description("Input parameter: The state of the status.")),
+		mcp.WithString("target_url", mcp.Description("Input parameter: The target URL to associate with this status. This URL will be linked from the GitHub UI to allow users to easily see the source of the status.  \nFor example, if your continuous integration system is posting build status, you would want to provide the deep link for the build output for this specific SHA:  \n`http://ci.example.com/user/repo/build/sha`")),
 	)
 
 	return models.Tool{

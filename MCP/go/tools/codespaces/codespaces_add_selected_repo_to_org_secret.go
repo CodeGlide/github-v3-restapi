@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
 	"github.com/github-v3-rest-api/mcp-server/models"
@@ -43,55 +42,25 @@ func Codespaces_add_selected_repo_to_org_secretHandler(cfg *config.APIConfig) fu
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repository_id"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
-		url := fmt.Sprintf("%s/orgs/%s/codespaces/secrets/%s/repositories/%s%s", cfg.BaseURL, org, secret_name, repository_id, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/codespaces/secrets/%s/repositories/%s", cfg.BaseURL, org, secret_name, repository_id)
 		req, err := http.NewRequest("PUT", url, nil)
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -125,7 +94,7 @@ func Codespaces_add_selected_repo_to_org_secretHandler(cfg *config.APIConfig) fu
 }
 
 func CreateCodespaces_add_selected_repo_to_org_secretTool(cfg *config.APIConfig) models.Tool {
-	tool := mcp.NewTool("put_orgs_org_codespaces_secrets_secret_name_repositories_repository_id",
+	tool := mcp.NewTool("put_orgs_org_codespaces_secrets_secret_name_repositories",
 		mcp.WithDescription("Add selected repository to an organization secret"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithString("secret_name", mcp.Required(), mcp.Description("The name of the secret.")),

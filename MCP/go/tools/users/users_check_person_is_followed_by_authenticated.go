@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
 	"github.com/github-v3-rest-api/mcp-server/models"
@@ -27,55 +26,25 @@ func Users_check_person_is_followed_by_authenticatedHandler(cfg *config.APIConfi
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: username"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
-		url := fmt.Sprintf("%s/user/following/%s%s", cfg.BaseURL, username, queryString)
+		url := fmt.Sprintf("%s/user/following/%s", cfg.BaseURL, username)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)

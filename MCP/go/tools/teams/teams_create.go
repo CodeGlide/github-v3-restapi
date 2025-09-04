@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -28,39 +27,6 @@ func Teams_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: org"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -77,23 +43,26 @@ func Teams_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/teams%s", cfg.BaseURL, org, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/teams", cfg.BaseURL, org)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -111,7 +80,7 @@ func Teams_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Team_full
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -130,7 +99,6 @@ func CreateTeams_createTool(cfg *config.APIConfig) models.Tool {
 	tool := mcp.NewTool("post_orgs_org_teams",
 		mcp.WithDescription("Create a team"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
-		mcp.WithString("notification_setting", mcp.Description("Input parameter: The notification setting the team has chosen. The options are:  \n * `notifications_enabled` - team members receive notifications when the team is @mentioned.  \n * `notifications_disabled` - no one receives notifications.  \nDefault: `notifications_enabled`")),
 		mcp.WithNumber("parent_team_id", mcp.Description("Input parameter: The ID of a team to set as the parent team.")),
 		mcp.WithString("permission", mcp.Description("Input parameter: **Closing down notice**. The permission that new repositories will be added to the team with when none is specified.")),
 		mcp.WithString("privacy", mcp.Description("Input parameter: The level of privacy this team should have. The options are:  \n**For a non-nested team:**  \n * `secret` - only visible to organization owners and members of this team.  \n * `closed` - visible to all members of this organization.  \nDefault: `secret`  \n**For a parent or child team:**  \n * `closed` - visible to all members of this organization.  \nDefault for child team: `closed`")),
@@ -138,6 +106,7 @@ func CreateTeams_createTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithString("description", mcp.Description("Input parameter: The description of the team.")),
 		mcp.WithArray("maintainers", mcp.Description("Input parameter: List GitHub usernames for organization members who will become team maintainers.")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Input parameter: The name of the team.")),
+		mcp.WithString("notification_setting", mcp.Description("Input parameter: The notification setting the team has chosen. The options are:  \n * `notifications_enabled` - team members receive notifications when the team is @mentioned.  \n * `notifications_disabled` - no one receives notifications.  \nDefault: `notifications_enabled`")),
 	)
 
 	return models.Tool{

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,41 +35,8 @@ func Orgs_update_issue_typeHandler(cfg *config.APIConfig) func(ctx context.Conte
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: issue_type_id"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
-		var requestBody models.GeneratedType
+		var requestBody models.GeneratedType_Organization_update_issue_type
 		
 		// Optimized: Single marshal/unmarshal with JSON tags handling field mapping
 		if argsJSON, err := json.Marshal(args); err == nil {
@@ -85,23 +51,26 @@ func Orgs_update_issue_typeHandler(cfg *config.APIConfig) func(ctx context.Conte
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/issue-types/%s%s", cfg.BaseURL, org, issue_type_id, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/issue-types/%s", cfg.BaseURL, org, issue_type_id)
 		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Orgs_update_issue_typeHandler(cfg *config.APIConfig) func(ctx context.Conte
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Issue_type
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,10 +108,10 @@ func CreateOrgs_update_issue_typeTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithDescription("Update issue type for an organization"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithNumber("issue_type_id", mcp.Required(), mcp.Description("The unique identifier of the issue type.")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Input parameter: Name of the issue type.")),
 		mcp.WithString("color", mcp.Description("Input parameter: Color for the issue type.")),
 		mcp.WithString("description", mcp.Description("Input parameter: Description of the issue type.")),
 		mcp.WithBoolean("is_enabled", mcp.Required(), mcp.Description("Input parameter: Whether or not the issue type is enabled at the organization level.")),
-		mcp.WithString("name", mcp.Required(), mcp.Description("Input parameter: Name of the issue type.")),
 	)
 
 	return models.Tool{

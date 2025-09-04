@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Pulls_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repo"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -85,23 +51,26 @@ func Pulls_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s/pulls%s", cfg.BaseURL, owner, repo, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/pulls", cfg.BaseURL, owner, repo)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Pulls_createHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Pull_request
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,14 +108,14 @@ func CreatePulls_createTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithDescription("Create a pull request"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
-		mcp.WithString("body", mcp.Description("Input parameter: The contents of the pull request.")),
-		mcp.WithBoolean("draft", mcp.Description("Input parameter: Indicates whether the pull request is a draft. See \"[Draft Pull Requests](https://docs.github.com/articles/about-pull-requests#draft-pull-requests)\" in the GitHub Help documentation to learn more.")),
 		mcp.WithString("head", mcp.Required(), mcp.Description("Input parameter: The name of the branch where your changes are implemented. For cross-repository pull requests in the same network, namespace `head` with a user like this: `username:branch`.")),
 		mcp.WithString("head_repo", mcp.Description("Input parameter: The name of the repository where the changes in the pull request were made. This field is required for cross-repository pull requests if both repositories are owned by the same organization.")),
 		mcp.WithNumber("issue", mcp.Description("Input parameter: An issue in the repository to convert to a pull request. The issue title, body, and comments will become the title, body, and comments on the new pull request. Required unless `title` is specified.")),
 		mcp.WithBoolean("maintainer_can_modify", mcp.Description("Input parameter: Indicates whether [maintainers can modify](https://docs.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) the pull request.")),
 		mcp.WithString("title", mcp.Description("Input parameter: The title of the new pull request. Required unless `issue` is specified.")),
 		mcp.WithString("base", mcp.Required(), mcp.Description("Input parameter: The name of the branch you want the changes pulled into. This should be an existing branch on the current repository. You cannot submit a pull request to one repository that requests a merge to a base of another repository.")),
+		mcp.WithString("body", mcp.Description("Input parameter: The contents of the pull request.")),
+		mcp.WithBoolean("draft", mcp.Description("Input parameter: Indicates whether the pull request is a draft. See \"[Draft Pull Requests](https://docs.github.com/articles/about-pull-requests#draft-pull-requests)\" in the GitHub Help documentation to learn more.")),
 	)
 
 	return models.Tool{

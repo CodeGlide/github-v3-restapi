@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -28,41 +27,8 @@ func Interactions_set_restrictions_for_orgHandler(cfg *config.APIConfig) func(ct
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: org"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
-		var requestBody models.GeneratedType
+		var requestBody models.GeneratedType_Interaction_limit
 		
 		// Optimized: Single marshal/unmarshal with JSON tags handling field mapping
 		if argsJSON, err := json.Marshal(args); err == nil {
@@ -77,23 +43,26 @@ func Interactions_set_restrictions_for_orgHandler(cfg *config.APIConfig) func(ct
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/interaction-limits%s", cfg.BaseURL, org, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/interaction-limits", cfg.BaseURL, org)
 		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -111,7 +80,7 @@ func Interactions_set_restrictions_for_orgHandler(cfg *config.APIConfig) func(ct
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Interaction_limit_response
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -130,8 +99,8 @@ func CreateInteractions_set_restrictions_for_orgTool(cfg *config.APIConfig) mode
 	tool := mcp.NewTool("put_orgs_org_interaction-limits",
 		mcp.WithDescription("Set interaction restrictions for an organization"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
-		mcp.WithString("expiry", mcp.Description("Input parameter: The duration of the interaction restriction. Default: `one_day`.")),
 		mcp.WithString("limit", mcp.Required(), mcp.Description("Input parameter: The type of GitHub user that can comment, open issues, or create pull requests while the interaction limit is in effect.")),
+		mcp.WithString("expiry", mcp.Description("Input parameter: The duration of the interaction restriction. Default: `one_day`.")),
 	)
 
 	return models.Tool{

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Dependency_graph_create_repository_snapshotHandler(cfg *config.APIConfig) f
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repo"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody models.Snapshot
 		
@@ -85,23 +51,26 @@ func Dependency_graph_create_repository_snapshotHandler(cfg *config.APIConfig) f
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s/dependency-graph/snapshots%s", cfg.BaseURL, owner, repo, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/dependency-graph/snapshots", cfg.BaseURL, owner, repo)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -139,14 +108,14 @@ func CreateDependency_graph_create_repository_snapshotTool(cfg *config.APIConfig
 		mcp.WithDescription("Create a snapshot of dependencies for a repository"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
-		mcp.WithObject("detector", mcp.Required(), mcp.Description("Input parameter: A description of the detector used.")),
-		mcp.WithObject("job", mcp.Required(), mcp.Description("")),
-		mcp.WithObject("manifests", mcp.Description("Input parameter: A collection of package manifests, which are a collection of related dependencies declared in a file or representing a logical group of dependencies.")),
-		mcp.WithObject("metadata", mcp.Description("Input parameter: User-defined metadata to store domain-specific information limited to 8 keys with scalar values.")),
 		mcp.WithString("ref", mcp.Required(), mcp.Description("Input parameter: The repository branch that triggered this snapshot.")),
 		mcp.WithString("scanned", mcp.Required(), mcp.Description("Input parameter: The time at which the snapshot was scanned.")),
 		mcp.WithString("sha", mcp.Required(), mcp.Description("Input parameter: The commit SHA associated with this dependency snapshot. Maximum length: 40 characters.")),
 		mcp.WithNumber("version", mcp.Required(), mcp.Description("Input parameter: The version of the repository snapshot submission.")),
+		mcp.WithObject("detector", mcp.Required(), mcp.Description("Input parameter: A description of the detector used.")),
+		mcp.WithObject("job", mcp.Required(), mcp.Description("")),
+		mcp.WithObject("manifests", mcp.Description("Input parameter: A collection of package manifests, which are a collection of related dependencies declared in a file or representing a logical group of dependencies.")),
+		mcp.WithObject("metadata", mcp.Description("Input parameter: User-defined metadata to store domain-specific information limited to 8 keys with scalar values.")),
 	)
 
 	return models.Tool{

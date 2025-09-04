@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
 	"github.com/github-v3-rest-api/mcp-server/models"
@@ -59,55 +58,25 @@ func Code_scanning_get_variant_analysis_repo_taskHandler(cfg *config.APIConfig) 
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repo_name"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
-		url := fmt.Sprintf("%s/repos/%s/%s/code-scanning/codeql/variant-analyses/%s/repos/%s/%s%s", cfg.BaseURL, owner, repo, codeql_variant_analysis_id, repo_owner, repo_name, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/code-scanning/codeql/variant-analyses/%s/repos/%s/%s", cfg.BaseURL, owner, repo, codeql_variant_analysis_id, repo_owner, repo_name)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -125,7 +94,7 @@ func Code_scanning_get_variant_analysis_repo_taskHandler(cfg *config.APIConfig) 
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Code_scanning_variant_analysis_repo_task
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -141,7 +110,7 @@ func Code_scanning_get_variant_analysis_repo_taskHandler(cfg *config.APIConfig) 
 }
 
 func CreateCode_scanning_get_variant_analysis_repo_taskTool(cfg *config.APIConfig) models.Tool {
-	tool := mcp.NewTool("get_repos_owner_repo_code-scanning_codeql_variant-analyses_codeql_variant_analysis_id_repos_repo_owner_repo_name",
+	tool := mcp.NewTool("get_repos_owner_repo_code-scanning_codeql_variant-analyses",
 		mcp.WithDescription("Get the analysis status of a repository in a CodeQL variant analysis"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the controller repository.")),

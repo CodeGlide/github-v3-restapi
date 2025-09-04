@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -44,39 +43,6 @@ func Checks_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reque
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: check_run_id"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody interface{}
 		
@@ -93,23 +59,26 @@ func Checks_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reque
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s/check-runs/%s%s", cfg.BaseURL, owner, repo, check_run_id, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/check-runs/%s", cfg.BaseURL, owner, repo, check_run_id)
 		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -127,7 +96,7 @@ func Checks_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reque
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Check_run
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -148,15 +117,15 @@ func CreateChecks_updateTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
 		mcp.WithNumber("check_run_id", mcp.Required(), mcp.Description("The unique identifier of the check run.")),
-		mcp.WithString("completed_at", mcp.Description("Input parameter: The time the check completed. This is a timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`.")),
-		mcp.WithString("conclusion", mcp.Description("Input parameter: **Required if you provide `completed_at` or a `status` of `completed`**. The final conclusion of the check. \n**Note:** Providing `conclusion` will automatically set the `status` parameter to `completed`. You cannot change a check run conclusion to `stale`, only GitHub can set this.")),
-		mcp.WithString("name", mcp.Description("Input parameter: The name of the check. For example, \"code-coverage\".")),
-		mcp.WithString("status", mcp.Description("Input parameter: The current status of the check run. Only GitHub Actions can set a status of `waiting`, `pending`, or `requested`.")),
-		mcp.WithString("details_url", mcp.Description("Input parameter: The URL of the integrator's site that has the full details of the check.")),
 		mcp.WithString("external_id", mcp.Description("Input parameter: A reference for the run on the integrator's system.")),
 		mcp.WithObject("output", mcp.Description("Input parameter: Check runs can accept a variety of data in the `output` object, including a `title` and `summary` and can optionally provide descriptive details about the run.")),
 		mcp.WithString("started_at", mcp.Description("Input parameter: This is a timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`.")),
 		mcp.WithArray("actions", mcp.Description("Input parameter: Possible further actions the integrator can perform, which a user may trigger. Each action includes a `label`, `identifier` and `description`. A maximum of three actions are accepted. To learn more about check runs and requested actions, see \"[Check runs and requested actions](https://docs.github.com/rest/guides/using-the-rest-api-to-interact-with-checks#check-runs-and-requested-actions).\"")),
+		mcp.WithString("completed_at", mcp.Description("Input parameter: The time the check completed. This is a timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`.")),
+		mcp.WithString("conclusion", mcp.Description("Input parameter: **Required if you provide `completed_at` or a `status` of `completed`**. The final conclusion of the check. \n**Note:** Providing `conclusion` will automatically set the `status` parameter to `completed`. You cannot change a check run conclusion to `stale`, only GitHub can set this.")),
+		mcp.WithString("details_url", mcp.Description("Input parameter: The URL of the integrator's site that has the full details of the check.")),
+		mcp.WithString("name", mcp.Description("Input parameter: The name of the check. For example, \"code-coverage\".")),
+		mcp.WithString("status", mcp.Description("Input parameter: The current status of the check run. Only GitHub Actions can set a status of `waiting`, `pending`, or `requested`.")),
 	)
 
 	return models.Tool{

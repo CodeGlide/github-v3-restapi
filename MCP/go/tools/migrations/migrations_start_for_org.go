@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -28,39 +27,6 @@ func Migrations_start_for_orgHandler(cfg *config.APIConfig) func(ctx context.Con
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: org"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -77,23 +43,26 @@ func Migrations_start_for_orgHandler(cfg *config.APIConfig) func(ctx context.Con
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/migrations%s", cfg.BaseURL, org, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/migrations", cfg.BaseURL, org)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -131,14 +100,14 @@ func CreateMigrations_start_for_orgTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithDescription("Start an organization migration"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithBoolean("org_metadata_only", mcp.Description("Input parameter: Indicates whether this should only include organization metadata (repositories array should be empty and will ignore other flags).")),
-		mcp.WithBoolean("exclude_releases", mcp.Description("Input parameter: Indicates whether releases should be excluded from the migration (to reduce migration archive file size).")),
-		mcp.WithBoolean("lock_repositories", mcp.Description("Input parameter: Indicates whether repositories should be locked (to prevent manipulation) while migrating data.")),
-		mcp.WithArray("repositories", mcp.Required(), mcp.Description("Input parameter: A list of arrays indicating which repositories should be migrated.")),
 		mcp.WithArray("exclude", mcp.Description("Input parameter: Exclude related items from being returned in the response in order to improve performance of the request.")),
-		mcp.WithBoolean("exclude_attachments", mcp.Description("Input parameter: Indicates whether attachments should be excluded from the migration (to reduce migration archive file size).")),
 		mcp.WithBoolean("exclude_git_data", mcp.Description("Input parameter: Indicates whether the repository git data should be excluded from the migration.")),
-		mcp.WithBoolean("exclude_metadata", mcp.Description("Input parameter: Indicates whether metadata should be excluded and only git source should be included for the migration.")),
 		mcp.WithBoolean("exclude_owner_projects", mcp.Description("Input parameter: Indicates whether projects owned by the organization or users should be excluded. from the migration.")),
+		mcp.WithBoolean("exclude_attachments", mcp.Description("Input parameter: Indicates whether attachments should be excluded from the migration (to reduce migration archive file size).")),
+		mcp.WithBoolean("exclude_releases", mcp.Description("Input parameter: Indicates whether releases should be excluded from the migration (to reduce migration archive file size).")),
+		mcp.WithArray("repositories", mcp.Required(), mcp.Description("Input parameter: A list of arrays indicating which repositories should be migrated.")),
+		mcp.WithBoolean("exclude_metadata", mcp.Description("Input parameter: Indicates whether metadata should be excluded and only git source should be included for the migration.")),
+		mcp.WithBoolean("lock_repositories", mcp.Description("Input parameter: Indicates whether repositories should be locked (to prevent manipulation) while migrating data.")),
 	)
 
 	return models.Tool{
