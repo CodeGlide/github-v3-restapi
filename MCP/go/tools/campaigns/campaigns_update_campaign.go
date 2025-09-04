@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Campaigns_update_campaignHandler(cfg *config.APIConfig) func(ctx context.Co
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: campaign_number"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -85,23 +51,26 @@ func Campaigns_update_campaignHandler(cfg *config.APIConfig) func(ctx context.Co
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/campaigns/%s%s", cfg.BaseURL, org, campaign_number, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/campaigns/%s", cfg.BaseURL, org, campaign_number)
 		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Campaigns_update_campaignHandler(cfg *config.APIConfig) func(ctx context.Co
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Campaign_summary
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,13 +108,13 @@ func CreateCampaigns_update_campaignTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithDescription("Update a campaign"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithNumber("campaign_number", mcp.Required(), mcp.Description("The campaign number.")),
+		mcp.WithArray("managers", mcp.Description("Input parameter: The logins of the users to set as the campaign managers. At this time, only a single manager can be supplied.")),
 		mcp.WithString("name", mcp.Description("Input parameter: The name of the campaign")),
 		mcp.WithString("state", mcp.Description("Input parameter: Indicates whether a campaign is open or closed")),
 		mcp.WithArray("team_managers", mcp.Description("Input parameter: The slugs of the teams to set as the campaign managers.")),
 		mcp.WithString("contact_link", mcp.Description("Input parameter: The contact link of the campaign. Must be a URI.")),
 		mcp.WithString("description", mcp.Description("Input parameter: A description for the campaign")),
 		mcp.WithString("ends_at", mcp.Description("Input parameter: The end date and time of the campaign, in ISO 8601 format':' YYYY-MM-DDTHH:MM:SSZ.")),
-		mcp.WithArray("managers", mcp.Description("Input parameter: The logins of the users to set as the campaign managers. At this time, only a single manager can be supplied.")),
 	)
 
 	return models.Tool{

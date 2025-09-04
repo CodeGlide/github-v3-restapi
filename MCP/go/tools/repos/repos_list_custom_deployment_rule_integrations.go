@@ -50,34 +50,6 @@ func Repos_list_custom_deployment_rule_integrationsHandler(cfg *config.APIConfig
 		if val, ok := args["per_page"]; ok {
 			queryParams = append(queryParams, fmt.Sprintf("per_page=%v", val))
 		}
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
 		queryString := ""
 		if len(queryParams) > 0 {
 			queryString = "?" + strings.Join(queryParams, "&")
@@ -87,17 +59,20 @@ func Repos_list_custom_deployment_rule_integrationsHandler(cfg *config.APIConfig
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -131,7 +106,7 @@ func Repos_list_custom_deployment_rule_integrationsHandler(cfg *config.APIConfig
 }
 
 func CreateRepos_list_custom_deployment_rule_integrationsTool(cfg *config.APIConfig) models.Tool {
-	tool := mcp.NewTool("get_repos_owner_repo_environments_environment_name_deployment_protection_rules_apps",
+	tool := mcp.NewTool("get_repos_owner_repo_environments_environment_name",
 		mcp.WithDescription("List custom deployment rule integrations available for an environment"),
 		mcp.WithString("environment_name", mcp.Required(), mcp.Description("The name of the environment. The name must be URL encoded. For example, any slashes in the name must be replaced with `%2F`.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),

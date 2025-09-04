@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Repos_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repo"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -85,23 +51,26 @@ func Repos_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s%s", cfg.BaseURL, owner, repo, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s", cfg.BaseURL, owner, repo)
 		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Repos_updateHandler(cfg *config.APIConfig) func(ctx context.Context, reques
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Full_repository
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,31 +108,31 @@ func CreateRepos_updateTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithDescription("Update a repository"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
-		mcp.WithBoolean("web_commit_signoff_required", mcp.Description("Input parameter: Either `true` to require contributors to sign off on web-based commits, or `false` to not require contributors to sign off on web-based commits.")),
-		mcp.WithBoolean("allow_auto_merge", mcp.Description("Input parameter: Either `true` to allow auto-merge on pull requests, or `false` to disallow auto-merge.")),
+		mcp.WithBoolean("allow_squash_merge", mcp.Description("Input parameter: Either `true` to allow squash-merging pull requests, or `false` to prevent squash-merging.")),
+		mcp.WithString("description", mcp.Description("Input parameter: A short description of the repository.")),
+		mcp.WithString("homepage", mcp.Description("Input parameter: A URL with more information about the repository.")),
 		mcp.WithBoolean("private", mcp.Description("Input parameter: Either `true` to make the repository private or `false` to make it public. Default: `false`.  \n**Note**: You will get a `422` error if the organization restricts [changing repository visibility](https://docs.github.com/articles/repository-permission-levels-for-an-organization#changing-the-visibility-of-repositories) to organization owners and a non-owner tries to change the value of private.")),
 		mcp.WithBoolean("use_squash_pr_title_as_default", mcp.Description("Input parameter: Either `true` to allow squash-merge commits to use pull request title, or `false` to use commit message. **This property is closing down. Please use `squash_merge_commit_title` instead.")),
-		mcp.WithBoolean("has_projects", mcp.Description("Input parameter: Either `true` to enable projects for this repository or `false` to disable them. **Note:** If you're creating a repository in an organization that has disabled repository projects, the default is `false`, and if you pass `true`, the API returns an error.")),
+		mcp.WithString("default_branch", mcp.Description("Input parameter: Updates the default branch for this repository.")),
+		mcp.WithBoolean("allow_merge_commit", mcp.Description("Input parameter: Either `true` to allow merging pull requests with a merge commit, or `false` to prevent merging pull requests with merge commits.")),
+		mcp.WithBoolean("allow_update_branch", mcp.Description("Input parameter: Either `true` to always allow a pull request head branch that is behind its base branch to be updated even if it is not required to be up to date before merging, or false otherwise.")),
+		mcp.WithBoolean("has_wiki", mcp.Description("Input parameter: Either `true` to enable the wiki for this repository or `false` to disable it.")),
+		mcp.WithString("merge_commit_message", mcp.Description("Input parameter: The default value for a merge commit message.\n\n- `PR_TITLE` - default to the pull request's title.\n- `PR_BODY` - default to the pull request's body.\n- `BLANK` - default to a blank commit message.")),
+		mcp.WithString("squash_merge_commit_message", mcp.Description("Input parameter: The default value for a squash merge commit message:\n\n- `PR_BODY` - default to the pull request's body.\n- `COMMIT_MESSAGES` - default to the branch's commit messages.\n- `BLANK` - default to a blank commit message.")),
+		mcp.WithString("merge_commit_title", mcp.Description("Input parameter: Required when using `merge_commit_message`.\n\nThe default value for a merge commit title.\n\n- `PR_TITLE` - default to the pull request's title.\n- `MERGE_MESSAGE` - default to the classic title for a merge message (e.g., Merge pull request #123 from branch-name).")),
+		mcp.WithObject("security_and_analysis", mcp.Description("Input parameter: Specify which security and analysis features to enable or disable for the repository.\n\nTo use this parameter, you must have admin permissions for the repository or be an owner or security manager for the organization that owns the repository. For more information, see \"[Managing security managers in your organization](https://docs.github.com/organizations/managing-peoples-access-to-your-organization-with-roles/managing-security-managers-in-your-organization).\"\n\nFor example, to enable GitHub Advanced Security, use this data in the body of the `PATCH` request:\n`{ \"security_and_analysis\": {\"advanced_security\": { \"status\": \"enabled\" } } }`.\n\nYou can check which security and analysis features are currently enabled by using a `GET /repos/{owner}/{repo}` request.")),
+		mcp.WithBoolean("web_commit_signoff_required", mcp.Description("Input parameter: Either `true` to require contributors to sign off on web-based commits, or `false` to not require contributors to sign off on web-based commits.")),
+		mcp.WithBoolean("archived", mcp.Description("Input parameter: Whether to archive this repository. `false` will unarchive a previously archived repository.")),
+		mcp.WithBoolean("delete_branch_on_merge", mcp.Description("Input parameter: Either `true` to allow automatically deleting head branches when pull requests are merged, or `false` to prevent automatic deletion.")),
+		mcp.WithString("squash_merge_commit_title", mcp.Description("Input parameter: Required when using `squash_merge_commit_message`.\n\nThe default value for a squash merge commit title:\n\n- `PR_TITLE` - default to the pull request's title.\n- `COMMIT_OR_PR_TITLE` - default to the commit's title (if only one commit) or the pull request's title (when more than one commit).")),
 		mcp.WithBoolean("is_template", mcp.Description("Input parameter: Either `true` to make this repo available as a template repository or `false` to prevent it.")),
+		mcp.WithBoolean("allow_auto_merge", mcp.Description("Input parameter: Either `true` to allow auto-merge on pull requests, or `false` to disallow auto-merge.")),
 		mcp.WithString("name", mcp.Description("Input parameter: The name of the repository.")),
 		mcp.WithBoolean("allow_forking", mcp.Description("Input parameter: Either `true` to allow private forks, or `false` to prevent private forks.")),
 		mcp.WithBoolean("allow_rebase_merge", mcp.Description("Input parameter: Either `true` to allow rebase-merging pull requests, or `false` to prevent rebase-merging.")),
-		mcp.WithBoolean("archived", mcp.Description("Input parameter: Whether to archive this repository. `false` will unarchive a previously archived repository.")),
-		mcp.WithString("squash_merge_commit_title", mcp.Description("Input parameter: Required when using `squash_merge_commit_message`.\n\nThe default value for a squash merge commit title:\n\n- `PR_TITLE` - default to the pull request's title.\n- `COMMIT_OR_PR_TITLE` - default to the commit's title (if only one commit) or the pull request's title (when more than one commit).")),
-		mcp.WithBoolean("allow_merge_commit", mcp.Description("Input parameter: Either `true` to allow merging pull requests with a merge commit, or `false` to prevent merging pull requests with merge commits.")),
-		mcp.WithBoolean("has_wiki", mcp.Description("Input parameter: Either `true` to enable the wiki for this repository or `false` to disable it.")),
-		mcp.WithString("squash_merge_commit_message", mcp.Description("Input parameter: The default value for a squash merge commit message:\n\n- `PR_BODY` - default to the pull request's body.\n- `COMMIT_MESSAGES` - default to the branch's commit messages.\n- `BLANK` - default to a blank commit message.")),
-		mcp.WithString("visibility", mcp.Description("Input parameter: The visibility of the repository.")),
-		mcp.WithBoolean("allow_squash_merge", mcp.Description("Input parameter: Either `true` to allow squash-merging pull requests, or `false` to prevent squash-merging.")),
-		mcp.WithString("description", mcp.Description("Input parameter: A short description of the repository.")),
-		mcp.WithObject("security_and_analysis", mcp.Description("Input parameter: Specify which security and analysis features to enable or disable for the repository.\n\nTo use this parameter, you must have admin permissions for the repository or be an owner or security manager for the organization that owns the repository. For more information, see \"[Managing security managers in your organization](https://docs.github.com/organizations/managing-peoples-access-to-your-organization-with-roles/managing-security-managers-in-your-organization).\"\n\nFor example, to enable GitHub Advanced Security, use this data in the body of the `PATCH` request:\n`{ \"security_and_analysis\": {\"advanced_security\": { \"status\": \"enabled\" } } }`.\n\nYou can check which security and analysis features are currently enabled by using a `GET /repos/{owner}/{repo}` request.")),
-		mcp.WithBoolean("allow_update_branch", mcp.Description("Input parameter: Either `true` to always allow a pull request head branch that is behind its base branch to be updated even if it is not required to be up to date before merging, or false otherwise.")),
-		mcp.WithString("homepage", mcp.Description("Input parameter: A URL with more information about the repository.")),
-		mcp.WithString("default_branch", mcp.Description("Input parameter: Updates the default branch for this repository.")),
-		mcp.WithBoolean("delete_branch_on_merge", mcp.Description("Input parameter: Either `true` to allow automatically deleting head branches when pull requests are merged, or `false` to prevent automatic deletion.")),
-		mcp.WithString("merge_commit_message", mcp.Description("Input parameter: The default value for a merge commit message.\n\n- `PR_TITLE` - default to the pull request's title.\n- `PR_BODY` - default to the pull request's body.\n- `BLANK` - default to a blank commit message.")),
 		mcp.WithBoolean("has_issues", mcp.Description("Input parameter: Either `true` to enable issues for this repository or `false` to disable them.")),
-		mcp.WithString("merge_commit_title", mcp.Description("Input parameter: Required when using `merge_commit_message`.\n\nThe default value for a merge commit title.\n\n- `PR_TITLE` - default to the pull request's title.\n- `MERGE_MESSAGE` - default to the classic title for a merge message (e.g., Merge pull request #123 from branch-name).")),
+		mcp.WithBoolean("has_projects", mcp.Description("Input parameter: Either `true` to enable projects for this repository or `false` to disable them. **Note:** If you're creating a repository in an organization that has disabled repository projects, the default is `false`, and if you pass `true`, the API returns an error.")),
+		mcp.WithString("visibility", mcp.Description("Input parameter: The visibility of the repository.")),
 	)
 
 	return models.Tool{

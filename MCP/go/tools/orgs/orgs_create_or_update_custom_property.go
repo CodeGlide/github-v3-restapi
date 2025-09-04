@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,41 +35,8 @@ func Orgs_create_or_update_custom_propertyHandler(cfg *config.APIConfig) func(ct
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: custom_property_name"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
-		var requestBody models.GeneratedType
+		var requestBody models.GeneratedType_Custom_property_set_payload
 		
 		// Optimized: Single marshal/unmarshal with JSON tags handling field mapping
 		if argsJSON, err := json.Marshal(args); err == nil {
@@ -85,23 +51,26 @@ func Orgs_create_or_update_custom_propertyHandler(cfg *config.APIConfig) func(ct
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/orgs/%s/properties/schema/%s%s", cfg.BaseURL, org, custom_property_name, queryString)
+		url := fmt.Sprintf("%s/orgs/%s/properties/schema/%s", cfg.BaseURL, org, custom_property_name)
 		req, err := http.NewRequest("PUT", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -119,7 +88,7 @@ func Orgs_create_or_update_custom_propertyHandler(cfg *config.APIConfig) func(ct
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Custom_property
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -139,12 +108,12 @@ func CreateOrgs_create_or_update_custom_propertyTool(cfg *config.APIConfig) mode
 		mcp.WithDescription("Create or update a custom property for an organization"),
 		mcp.WithString("org", mcp.Required(), mcp.Description("The organization name. The name is not case sensitive.")),
 		mcp.WithString("custom_property_name", mcp.Required(), mcp.Description("The custom property name")),
+		mcp.WithArray("allowed_values", mcp.Description("Input parameter: An ordered list of the allowed values of the property.\nThe property can have up to 200 allowed values.")),
+		mcp.WithString("default_value", mcp.Description("Input parameter: Default value of the property")),
 		mcp.WithString("description", mcp.Description("Input parameter: Short description of the property")),
 		mcp.WithBoolean("required", mcp.Description("Input parameter: Whether the property is required.")),
 		mcp.WithString("value_type", mcp.Required(), mcp.Description("Input parameter: The type of the value for the property")),
 		mcp.WithString("values_editable_by", mcp.Description("Input parameter: Who can edit the values of the property")),
-		mcp.WithArray("allowed_values", mcp.Description("Input parameter: An ordered list of the allowed values of the property.\nThe property can have up to 200 allowed values.")),
-		mcp.WithString("default_value", mcp.Description("Input parameter: Default value of the property")),
 	)
 
 	return models.Tool{

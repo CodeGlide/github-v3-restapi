@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -19,39 +18,6 @@ func Users_update_authenticatedHandler(cfg *config.APIConfig) func(ctx context.C
 		args, ok := request.Params.Arguments.(map[string]any)
 		if !ok {
 			return mcp.NewToolResultError("Invalid arguments object"), nil
-		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
 		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
@@ -69,23 +35,26 @@ func Users_update_authenticatedHandler(cfg *config.APIConfig) func(ctx context.C
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/user%s", cfg.BaseURL, queryString)
+		url := fmt.Sprintf("%s/user", cfg.BaseURL)
 		req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -103,7 +72,7 @@ func Users_update_authenticatedHandler(cfg *config.APIConfig) func(ctx context.C
 			return mcp.NewToolResultError(fmt.Sprintf("API error: %s", body)), nil
 		}
 		// Use properly typed response
-		var result models.GeneratedType
+		var result models.GeneratedType_Private_user
 		if err := json.Unmarshal(body, &result); err != nil {
 			// Fallback to raw text if unmarshaling fails
 			return mcp.NewToolResultText(string(body)), nil
@@ -121,6 +90,7 @@ func Users_update_authenticatedHandler(cfg *config.APIConfig) func(ctx context.C
 func CreateUsers_update_authenticatedTool(cfg *config.APIConfig) models.Tool {
 	tool := mcp.NewTool("patch_user",
 		mcp.WithDescription("Update the authenticated user"),
+		mcp.WithString("twitter_username", mcp.Description("Input parameter: The new Twitter username of the user.")),
 		mcp.WithString("bio", mcp.Description("Input parameter: The new short biography of the user.")),
 		mcp.WithString("blog", mcp.Description("Input parameter: The new blog URL of the user.")),
 		mcp.WithString("company", mcp.Description("Input parameter: The new company of the user.")),
@@ -128,7 +98,6 @@ func CreateUsers_update_authenticatedTool(cfg *config.APIConfig) models.Tool {
 		mcp.WithBoolean("hireable", mcp.Description("Input parameter: The new hiring availability of the user.")),
 		mcp.WithString("location", mcp.Description("Input parameter: The new location of the user.")),
 		mcp.WithString("name", mcp.Description("Input parameter: The new name of the user.")),
-		mcp.WithString("twitter_username", mcp.Description("Input parameter: The new Twitter username of the user.")),
 	)
 
 	return models.Tool{

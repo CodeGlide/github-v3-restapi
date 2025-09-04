@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"bytes"
 
 	"github.com/github-v3-rest-api/mcp-server/config"
@@ -36,39 +35,6 @@ func Codespaces_create_with_repo_for_authenticated_userHandler(cfg *config.APICo
 		if !ok {
 			return mcp.NewToolResultError("Invalid path parameter: repo"), nil
 		}
-		queryParams := make([]string, 0)
-		// Handle multiple authentication parameters
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("key=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_after=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("last_used_before=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("owner=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("permission=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("repository=%s", cfg.BearerToken))
-		}
-		if cfg.APIKey != "" {
-			queryParams = append(queryParams, fmt.Sprintf("secret_type=%s", cfg.APIKey))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("sort=%s", cfg.BearerToken))
-		}
-		if cfg.BearerToken != "" {
-			queryParams = append(queryParams, fmt.Sprintf("token_id=%s", cfg.BearerToken))
-		}
-		queryString := ""
-		if len(queryParams) > 0 {
-			queryString = "?" + strings.Join(queryParams, "&")
-		}
 		// Create properly typed request body using the generated schema
 		var requestBody map[string]interface{}
 		
@@ -85,23 +51,26 @@ func Codespaces_create_with_repo_for_authenticated_userHandler(cfg *config.APICo
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to encode request body", err), nil
 		}
-		url := fmt.Sprintf("%s/repos/%s/%s/codespaces%s", cfg.BaseURL, owner, repo, queryString)
+		url := fmt.Sprintf("%s/repos/%s/%s/codespaces", cfg.BaseURL, owner, repo)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			return mcp.NewToolResultErrorFromErr("Failed to create request", err), nil
 		}
-		// Set authentication based on auth type
-		// Handle multiple authentication parameters
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
-		// API key already added to query string
+		// No specific authentication scheme defined - add fallback authentication
+		if cfg.BearerToken != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.BearerToken)
+		} else if cfg.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+		} else if cfg.BasicAuth != "" {
+			req.Header.Set("Authorization", "Basic "+cfg.BasicAuth)
+		}
+		// Note: If no auth tokens provided, requests will be made without authentication
+		
+		// Add custom headers if provided
+		
+		// Set client identification headers
+		req.Header.Set("X-Request-Source", "Codeglide-MCP-generator")
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -139,17 +108,17 @@ func CreateCodespaces_create_with_repo_for_authenticated_userTool(cfg *config.AP
 		mcp.WithDescription("Create a codespace in a repository"),
 		mcp.WithString("owner", mcp.Required(), mcp.Description("The account owner of the repository. The name is not case sensitive.")),
 		mcp.WithString("repo", mcp.Required(), mcp.Description("The name of the repository without the `.git` extension. The name is not case sensitive.")),
-		mcp.WithBoolean("multi_repo_permissions_opt_out", mcp.Description("Input parameter: Whether to authorize requested permissions from devcontainer.json")),
-		mcp.WithNumber("retention_period_minutes", mcp.Description("Input parameter: Duration in minutes after codespace has gone idle in which it will be deleted. Must be integer minutes between 0 and 43200 (30 days).")),
-		mcp.WithString("display_name", mcp.Description("Input parameter: Display name for this codespace")),
-		mcp.WithString("ref", mcp.Description("Input parameter: Git ref (typically a branch name) for this codespace")),
-		mcp.WithString("geo", mcp.Description("Input parameter: The geographic area for this codespace. If not specified, the value is assigned by IP. This property replaces `location`, which is closing down.")),
-		mcp.WithNumber("idle_timeout_minutes", mcp.Description("Input parameter: Time in minutes before codespace stops from inactivity")),
-		mcp.WithString("location", mcp.Description("Input parameter: The requested location for a new codespace. Best efforts are made to respect this upon creation. Assigned by IP if not provided.")),
-		mcp.WithString("machine", mcp.Description("Input parameter: Machine type to use for this codespace")),
-		mcp.WithString("working_directory", mcp.Description("Input parameter: Working directory for this codespace")),
 		mcp.WithString("client_ip", mcp.Description("Input parameter: IP for location auto-detection when proxying a request")),
 		mcp.WithString("devcontainer_path", mcp.Description("Input parameter: Path to devcontainer.json config to use for this codespace")),
+		mcp.WithString("machine", mcp.Description("Input parameter: Machine type to use for this codespace")),
+		mcp.WithString("ref", mcp.Description("Input parameter: Git ref (typically a branch name) for this codespace")),
+		mcp.WithNumber("retention_period_minutes", mcp.Description("Input parameter: Duration in minutes after codespace has gone idle in which it will be deleted. Must be integer minutes between 0 and 43200 (30 days).")),
+		mcp.WithString("geo", mcp.Description("Input parameter: The geographic area for this codespace. If not specified, the value is assigned by IP. This property replaces `location`, which is closing down.")),
+		mcp.WithNumber("idle_timeout_minutes", mcp.Description("Input parameter: Time in minutes before codespace stops from inactivity")),
+		mcp.WithString("display_name", mcp.Description("Input parameter: Display name for this codespace")),
+		mcp.WithString("location", mcp.Description("Input parameter: The requested location for a new codespace. Best efforts are made to respect this upon creation. Assigned by IP if not provided.")),
+		mcp.WithBoolean("multi_repo_permissions_opt_out", mcp.Description("Input parameter: Whether to authorize requested permissions from devcontainer.json")),
+		mcp.WithString("working_directory", mcp.Description("Input parameter: Working directory for this codespace")),
 	)
 
 	return models.Tool{
